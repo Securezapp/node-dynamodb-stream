@@ -156,8 +156,16 @@ class DynamoDBStream extends EventEmitter {
 			StreamArn: this._streamArn
 		}
 
-		const { ShardIterator } = await this._ddbStreams.getShardIterator(params)
-		shardData.nextShardIterator = ShardIterator
+		try {
+			const { ShardIterator } = await this._ddbStreams.getShardIterator(params)
+			shardData.nextShardIterator = ShardIterator
+		} catch (e) {
+			if (e.name === 'ResourceNotFoundException') {
+				debug('shard %s no longer exists, skipping', shardData.shardId)
+			} else {
+				throw e
+			}
+		}
 	}
 
 	async _getRecords() {
@@ -170,6 +178,10 @@ class DynamoDBStream extends EventEmitter {
 
 	async _getShardRecords(shardData) {
 		debug('_getShardRecords')
+
+		if (!shardData.nextShardIterator) {
+			return []
+		}
 
 		const params = { ShardIterator: shardData.nextShardIterator }
 
