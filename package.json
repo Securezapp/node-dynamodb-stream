@@ -1,7 +1,7 @@
 {
-  "name": "dynamodb-stream",
-  "version": "1.1.4",
-  "description": "",
+  "name": "@securezapp/dynamodb-stream",
+  "version": "1.1.6",
+  "description": "A wrapper around low level AWS SDK that makes it easy to consume a DynamoDB Stream",
   "main": "index.js",
   "scripts": {
     "test": "env AWS_REGION=us-east-1 AWS_PROFILE=test DEBUG=DynamoDBStream* npx ava test.js"
@@ -21,11 +21,14 @@
   "bugs": {
     "url": "https://github.com/ironSource/node-dynamodb-stream/issues"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ironSource/node-dynamodb-stream"
+    "url": "https://github.com/Securezapp/node-dynamodb-stream"
   },
-  "homepage": "https://github.com/ironSource/node-dynamodb-stream",
+  "homepage": "https://github.com/Securezapp/node-dynamodb-stream",
   "license": "MIT",
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.4.1",
