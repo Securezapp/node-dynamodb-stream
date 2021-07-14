@@ -177,6 +177,7 @@ class DynamoDBStream extends EventEmitter {
 			switch (error.name) {
 				case 'ResourceNotFoundException':
 					debug('shard %s no longer exists, skipping', shardData.shardId)
+					shardData.nextShardIterator = null
 					break
 				case 'ThrottlingException':
 					const { attempts, totalRetryDelay } = error.$metadata
