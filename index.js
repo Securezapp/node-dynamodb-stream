@@ -61,21 +61,34 @@ class DynamoDBStream extends EventEmitter {
 				debug('lastShardId: %s', lastShardId)
 				params.ExclusiveStartShardId = lastShardId
 			}
-			const { StreamDescription } = await this._ddbStreams.describeStream(params)
+			try {
+				const { StreamDescription } = await this._ddbStreams.describeStream(params)
 
-			const shards = StreamDescription.Shards
-			lastShardId = StreamDescription.LastEvaluatedShardId
+				const shards = StreamDescription.Shards
+				lastShardId = StreamDescription.LastEvaluatedShardId
 
-			// collect all the new shards of this stream
-			for (const newShardEntry of shards) {
-				const existingShardEntry = this._shards.get(newShardEntry.ShardId)
+				// collect all the new shards of this stream
+				for (const newShardEntry of shards) {
+					const existingShardEntry = this._shards.get(newShardEntry.ShardId)
 
-				if (!existingShardEntry) {
-					this._shards.set(newShardEntry.ShardId, {
-						shardId: newShardEntry.ShardId
-					})
+					if (!existingShardEntry) {
+						this._shards.set(newShardEntry.ShardId, {
+							shardId: newShardEntry.ShardId
+						})
 
-					newShardIds.push(newShardEntry.ShardId)
+						newShardIds.push(newShardEntry.ShardId)
+					}
+				}
+			} catch (error) {
+				this._emitError(error)
+				switch (error.name) {
+					case 'ThrottlingException':
+						const { attempts, totalRetryDelay } = error.$metadata
+						debug('describeStream command throttled - attempts: %d, totalRetryDelay: %d', attempts, totalRetryDelay)
+						lastShardId = null // break out of loop; leave any remaining new shards for next call
+						break
+					default:
+						throw e
 				}
 			}
 		} while (lastShardId)
@@ -159,11 +172,19 @@ class DynamoDBStream extends EventEmitter {
 		try {
 			const { ShardIterator } = await this._ddbStreams.getShardIterator(params)
 			shardData.nextShardIterator = ShardIterator
-		} catch (e) {
-			if (e.name === 'ResourceNotFoundException') {
-				debug('shard %s no longer exists, skipping', shardData.shardId)
-			} else {
-				throw e
+		} catch (error) {
+			this._emitError(error)
+			switch (error.name) {
+				case 'ResourceNotFoundException':
+					debug('shard %s no longer exists, skipping', shardData.shardId)
+					break
+				case 'ThrottlingException':
+					const { attempts, totalRetryDelay } = error.$metadata
+					debug('getShardIterator command throttled for shard %s - attempts: %d, totalRetryDelay: %d', shardData.shardId, attempts, totalRetryDelay)
+					shardData.nextShardIterator = undefined // skip for now, but don't prune it
+					break
+				default:
+					throw e
 			}
 		}
 	}
@@ -194,13 +215,28 @@ class DynamoDBStream extends EventEmitter {
 			}
 
 			return Records
-		} catch (e) {
-			if (e.name === 'ExpiredIteratorException') {
-				debug('_getShardRecords expired iterator', shardData)
-				shardData.nextShardIterator = null
-			} else {
-				throw e
+		} catch (error) {
+			this._emitError(error)
+			switch (error.name) {
+				case 'ExpiredIteratorException':
+					debug('_getShardRecords expired iterator', shardData)
+					shardData.nextShardIterator = null
+					break
+				case 'ResourceNotFoundException':
+					debug('_getShardRecords shard %s no longer exists', shardData)
+					shardData.nextShardIterator = null
+					break
+				case 'ThrottlingException':
+					const { attempts, totalRetryDelay } = error.$metadata
+					debug('getRecords command throttled for shard %s - attempts: %d, totalRetryDelay: %d', shardData.shardId, attempts, totalRetryDelay)
+					shardData.nextShardIterator = undefined // skip for now, but don't prune it
+					break
+				default:
+					console.log(error)
+					process.exit(1)
+					throw e
 			}
+			return []
 		}
 	}
 
@@ -266,6 +302,10 @@ class DynamoDBStream extends EventEmitter {
 
 	_emitNewShardsEvent(shardIds) {
 		this.emit('new shards', shardIds)
+	}
+
+	_emitError(error) {
+		this.emit('error', error)
 	}
 }
 
