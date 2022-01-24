@@ -1,6 +1,6 @@
 const test = require('ava')
 const DynamoDBStream = require('./index')
-const { DynamoDB } = require('@aws-sdk/client-dynamodb')
+const { DynamoDB, waitForTableExists, waitForTableNotExists } = require('@aws-sdk/client-dynamodb')
 const { DynamoDBStreams } = require('@aws-sdk/client-dynamodb-streams')
 const { unmarshall } = require('@aws-sdk/util-dynamodb')
 const { ulid } = require('ulid')
@@ -25,6 +25,9 @@ test('reports the correct stream of changes', async t => {
 	await putItem({ pk: pkB, data: '2' })
 	await ddbStream.fetchStreamState()
 	await deleteItem(pkA)
+	await ddbStream.fetchStreamState()
+	// Incr. test robustness, as sometimes the first fetch does not include the
+	// delete event.
 	await ddbStream.fetchStreamState()
 
 	t.deepEqual(eventLog, [
@@ -164,7 +167,7 @@ async function waitForTable(exists) {
 	}
 
 	// Supports 'tableExists' and 'tableNotExists'
-	await ddb.waitFor(exists ? 'tableExists' : 'tableNotExists', params)
+	await exists ? waitForTableExists(ddb, params) : waitForTableNotExists(ddb, params)
 	debug('table %s.', exists ? 'available' : 'deleted')
 }
 
