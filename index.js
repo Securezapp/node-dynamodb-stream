@@ -88,7 +88,7 @@ class DynamoDBStream extends EventEmitter {
 						lastShardId = null // break out of loop; leave any remaining new shards for next call
 						break
 					default:
-						throw e
+						throw error
 				}
 			}
 		} while (lastShardId)
