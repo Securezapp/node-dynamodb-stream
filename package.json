@@ -1,6 +1,6 @@
 {
   "name": "@securezapp/dynamodb-stream",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "A wrapper around low level AWS SDK that makes it easy to consume a DynamoDB Stream",
   "main": "index.js",
   "scripts": {
@@ -18,9 +18,9 @@
     "@kessler/async-map-limit": "^3.0.0",
     "debug": "^4.3.3"
   },
-  "author": "Yaniv Kessler",
+  "author": "Yaniv Kessler, Jan Hecking",
   "bugs": {
-    "url": "https://github.com/ironSource/node-dynamodb-stream/issues"
+    "url": "https://github.com/Securezapp/node-dynamodb-stream/issues"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
