@@ -4,7 +4,8 @@
   "description": "A wrapper around low level AWS SDK that makes it easy to consume a DynamoDB Stream",
   "main": "index.js",
   "scripts": {
-    "test": "env AWS_REGION=us-east-1 AWS_PROFILE=test DEBUG=DynamoDBStream* npx ava test.js"
+    "test": "npx ava test.js",
+    "test:debug": "env DEBUG=DynamoDBStream* npx ava test.js"
   },
   "keywords": [
     "stream",
